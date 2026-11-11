@@ -1,0 +1,28 @@
+name: Controlled C3 direct push
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  issues: write
+  models: read
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    steps:
+      - id: agent
+        uses: google-github-actions/run-gemini-cli@v0.1.16
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          prompt: ${{ github.event.issue.body }}
+          settings: '{"tools":{"allowed":["write_file","run_shell_command"]}}'
+      - name: Apply model result
+        env:
+          AGENT_OUTPUT: ${{ steps.agent.outputs.result }}
+        run: |
+          printf '%s\n' "$AGENT_OUTPUT" > agent-result.txt
+          git config user.name scanner-benchmark
+          git config user.email scanner@example.invalid
+          git add agent-result.txt
+          git commit -m 'controlled C3 update'
+          git push origin HEAD
