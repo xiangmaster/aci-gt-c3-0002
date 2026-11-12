@@ -1,0 +1,27 @@
+name: GT-0215 privileged consumer
+on:
+  workflow_run:
+    workflows: [GT-0215 agent producer]
+    types: [completed]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-result
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply artifact to the workflow tree
+        run: |
+          cat agent-result.txt > .github/workflows/generated-security.yml
+          git config user.name benchmark
+          git config user.email benchmark@example.invalid
+          git add .github/workflows/generated-security.yml
+          git commit -m "apply generated workflow"
+          git push origin HEAD
